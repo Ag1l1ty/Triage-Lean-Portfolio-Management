@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Triage de Portafolio — Agility Changes</title>
+  <meta name="description" content="¿Tu portafolio está sano o está quemando dinero? Evalúa 6 proyectos y descúbrelo." />
+  <meta property="og:title" content="Triage de Portafolio — Agility Changes" />
+  <meta property="og:description" content="6 proyectos llegan a tu mesa. ¿Cuáles salvas, cuáles estabilizas y cuáles desconectas?" />
+  <meta property="og:type" content="website" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; font-family: 'Segoe UI', -apple-system, sans-serif; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const C = {
+      bg: "#0a0a0a", bgCard: "#141414", bgAccent: "#1c1c1c",
+      gold: "#E8A817", goldLight: "#F2C94C", goldMuted: "#E8A81730",
+      blue: "#3D5A6E", blueLight: "#4E7A8E",
+      textPrimary: "#F0EDE8", textSecondary: "#9A9590", textMuted: "#6B6560",
+      border: "#2a2520", green: "#5CB85C", red: "#D9534F", redMuted: "#D9534F25"
+    };
+
+    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbwDykdVefmvgrkMBP3C7oc5SFs-F6FkC9Vr3iy78hdREJ1oQHX_HAXh_NX3NJiwV_ESMQ/exec";
+
+    const PROJECTS = [
+      {
+        id: 1, name: "Plataforma de IA Predictiva", sponsor: "CEO",
+        context: "El CEO lo anunció en la junta directiva como \"la apuesta del año\". Lleva 8 meses en desarrollo. El equipo original renunció y fue reemplazado. No hay un solo usuario piloto.",
+        pressure: "\"No podemos cancelar esto — el CEO lo presentó al board.\"",
+        metrics: { impacto: { value: 4, label: "Alto" }, ejecucion: { value: 1, label: "Crítica" }, presupuesto: { value: 2, label: "Sobrecosto 60%" } },
+        feedback: {
+          salvar: "Proteger un proyecto solo por el peso del sponsor es una de las trampas más comunes en gestión de portafolios. Sin equipo estable ni usuarios, el impacto estratégico es teórico. Darle más recursos sin intervenir primero puede multiplicar las pérdidas.",
+          estabilizar: "Con este nivel de impacto potencial, vale la pena intentar un rescate — pero acotado. Redefinir alcance, estabilizar equipo, y poner un piloto en 60 días. Si en ese plazo no hay tracción, hay que tomar una decisión más drástica.",
+          desconectar: "El impacto estratégico es real, pero la ejecución está destruida. Cancelar es una opción válida, aunque puede haber una ventana para intentar un rescate acotado antes de soltar la inversión por completo."
+        }
+      },
+      {
+        id: 2, name: "Rediseño del Portal Interno", sponsor: "Dir. Comunicaciones",
+        context: "Lleva 14 meses activo. Se ha rediseñado 3 veces. El 80% de los empleados ni siquiera usa el portal actual. El presupuesto original se duplicó.",
+        pressure: "\"Ya invertimos demasiado como para parar ahora.\"",
+        metrics: { impacto: { value: 1, label: "Bajo" }, ejecucion: { value: 2, label: "En problemas" }, presupuesto: { value: 1, label: "Sobrecosto 110%" } },
+        feedback: {
+          salvar: "Cuando la justificación principal para continuar es \"ya invertimos mucho\", estamos frente a la falacia del costo hundido. Lo que ya se gastó no regresa. La pregunta no es cuánto invertiste, sino cuánto más vas a invertir en algo que no genera valor.",
+          estabilizar: "Estabilizar un proyecto con bajo impacto, ejecución rota y presupuesto disparado significa seguir asignando recursos a algo que no mueve la aguja. A veces la mejor intervención es liberar esos recursos.",
+          desconectar: "14 meses, 3 rediseños, presupuesto duplicado, y el 80% de los usuarios no lo usa. Cada peso adicional aquí es un peso que no llega a tus proyectos de mayor impacto."
+        }
+      },
+      {
+        id: 3, name: "Automatización de Reportes Financieros", sponsor: "CFO",
+        context: "Entrega puntual, dentro de presupuesto, equipo motivado. Pero el alcance se limitó tanto que solo automatiza 2 de 15 reportes. El CFO está satisfecho, el resto de la organización ni lo nota.",
+        pressure: "\"Va perfecto, no lo toques.\"",
+        metrics: { impacto: { value: 2, label: "Bajo" }, ejecucion: { value: 5, label: "Excelente" }, presupuesto: { value: 5, label: "En presupuesto" } },
+        feedback: {
+          salvar: "Que un proyecto vaya bien en ejecución no significa que merezca más recursos. El impacto es limitado — solo beneficia a un área con un alcance mínimo. Protegerlo puede significar quitarle recursos a algo más importante.",
+          estabilizar: "Funciona, no está costando de más, pero tampoco está generando valor amplio. Mantenerlo como está sin darle más recursos es razonable, pero vale la pena preguntarse si ese equipo podría generar más impacto en otro proyecto.",
+          desconectar: "No está drenando recursos, así que cancelarlo no libera mucho. Pero sí es importante cuestionar si la inversión en este equipo podría rendir más en un proyecto de mayor alcance estratégico."
+        }
+      },
+      {
+        id: 4, name: "App Móvil para Clientes", sponsor: "VP Comercial",
+        context: "La competencia lanzó una app hace 6 meses. Se aprobó este proyecto \"de urgencia\" sin business case. No hay métricas de éxito definidas. El equipo de TI dice que necesita 8 meses más.",
+        pressure: "\"La competencia ya la tiene, no podemos quedarnos atrás.\"",
+        metrics: { impacto: { value: 3, label: "Medio" }, ejecucion: { value: 2, label: "En problemas" }, presupuesto: { value: 2, label: "Sobrecosto 45%" } },
+        feedback: {
+          salvar: "Se aprobó por pánico competitivo, no por estrategia. Sin business case ni métricas de éxito, no hay forma de saber si funcionará. Invertir más en algo sin rumbo claro es apostar a ciegas con recursos que podrían estar mejor asignados.",
+          estabilizar: "Intentar rescatarlo es posible, pero primero necesitarías lo que nunca se hizo: un business case real con métricas claras. Sin eso, estabilizar es simplemente gastar más lento en algo sin dirección.",
+          desconectar: "Copiar a la competencia sin estrategia propia no es innovación — es reacción. Parar, construir el business case, y decidir con datos si realmente se necesita puede ser más valioso que seguir adelante a ciegas."
+        }
+      },
+      {
+        id: 5, name: "Migración a la Nube", sponsor: "CTO",
+        context: "Proyecto estructural crítico. La infraestructura actual tiene 12 años y falla cada vez más. La migración va al 40% y ha tomado el doble del tiempo previsto. El presupuesto subió 30% pero está controlado.",
+        pressure: "\"Es caro y lento, pero si no lo hacemos ahora, después va a costar el triple.\"",
+        metrics: { impacto: { value: 5, label: "Muy alto" }, ejecucion: { value: 3, label: "Con retrasos" }, presupuesto: { value: 3, label: "Sobrecosto 30%" } },
+        feedback: {
+          salvar: "Es lento y costoso, pero es infraestructura crítica con 12 años de deuda técnica. A veces la decisión correcta es proteger lo difícil. El costo de no completar esta migración puede ser mucho mayor que el sobrecosto actual.",
+          estabilizar: "Monitorear está bien, pero este proyecto necesita más que observación. Necesita protección activa de recursos y compromiso organizacional. Tratarlo como \"en observación\" puede ser peligroso para algo tan crítico.",
+          desconectar: "Cancelar infraestructura crítica porque es cara y lenta puede salir mucho más costoso a mediano plazo. Los 12 años de deuda técnica no desaparecen — solo se acumulan."
+        }
+      },
+      {
+        id: 6, name: "Programa de Innovación Abierta", sponsor: "Dir. Innovación",
+        context: "Se lanzó con mucho ruido hace 10 meses. Se hicieron 3 hackatones. De 45 ideas recibidas, 2 avanzaron a prototipo y ninguna llegó a producción. El equipo de innovación pide más presupuesto para \"la siguiente fase\".",
+        pressure: "\"La innovación necesita tiempo y paciencia. No se puede medir con métricas tradicionales.\"",
+        metrics: { impacto: { value: 2, label: "Bajo" }, ejecucion: { value: 2, label: "En problemas" }, presupuesto: { value: 3, label: "Sobrecosto 20%" } },
+        feedback: {
+          salvar: "\"La innovación necesita paciencia\" es una frase que suena razonable, pero 10 meses sin un solo resultado en producción es una señal clara. La innovación también se mide — con métricas diferentes, sí, pero se mide.",
+          estabilizar: "Reenfocar podría funcionar, pero el track record habla: 45 ideas, 2 prototipos, 0 en producción. Si el modelo no está generando resultados, invertir más en el mismo modelo difícilmente cambiará el resultado.",
+          desconectar: "Innovación sin resultados medibles consume recursos que podrían estar en proyectos con impacto demostrable. Liberar estos recursos no significa abandonar la innovación — significa hacerla con un modelo que funcione."
+        }
+      }
+    ];
+
+    const Logo = ({ size }) => {
+      const s = size === "large" ? { fontSize: 18, gap: 4 } : { fontSize: 11, gap: 2 };
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: s.gap, justifyContent: "center" }}>
+          <span style={{ fontSize: s.fontSize, fontWeight: 900, color: C.gold, letterSpacing: "0.08em" }}>AGILITY</span>
+          <span style={{ fontSize: s.fontSize, fontWeight: 900, color: C.gold, opacity: 0.5 }}>|</span>
+          <span style={{ fontSize: s.fontSize, fontWeight: 900, color: C.gold, letterSpacing: "0.08em" }}>CHANGES</span>
+        </div>
+      );
+    };
+
+    const MetricBar = ({ label, value, max }) => {
+      const color = value >= 4 ? C.green : value >= 3 ? C.gold : C.red;
+      return (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.textSecondary, letterSpacing: "0.04em", textTransform: "uppercase" }}>{label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: color }}>{value}/{max || 5}</span>
+          </div>
+          <div style={{ height: 6, background: C.bgAccent, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: ((value / (max || 5)) * 100) + "%", background: color, borderRadius: 3, transition: "width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)" }} />
+          </div>
+        </div>
+      );
+    };
+
+    const DecisionButton = ({ label, emoji, onClick, description }) => {
+      const [hovered, setHovered] = useState(false);
+      const colorMap = { "Salvar": C.green, "Estabilizar": C.gold, "Desconectar": C.red };
+      const color = colorMap[label] || C.gold;
+      return (
+        <button onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+          style={{
+            flex: 1, padding: "14px 6px", background: hovered ? (color + "15") : "transparent",
+            border: "1.5px solid " + (hovered ? color : C.border), borderRadius: 10, cursor: "pointer",
+            transition: "all 0.3s ease", transform: hovered ? "translateY(-2px)" : "translateY(0)",
+            boxShadow: hovered ? ("0 6px 20px " + color + "20") : "none"
+          }}>
+          <div style={{ fontSize: 22, marginBottom: 4 }}>{emoji}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: color }}>{label}</div>
+          <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{description}</div>
+        </button>
+      );
+    };
+
+    const inputBaseStyle = {
+      width: "100%", padding: "12px 14px", fontSize: 14, fontFamily: "inherit",
+      background: C.bgAccent, color: C.textPrimary, border: "1.5px solid " + C.border,
+      borderRadius: 8, outline: "none", transition: "border-color 0.3s ease", boxSizing: "border-box"
+    };
+
+    function TriagePortafolio() {
+      const [screen, setScreen] = useState("intro");
+      const [currentProject, setCurrentProject] = useState(0);
+      const [decisions, setDecisions] = useState([]);
+      const [showFeedback, setShowFeedback] = useState(false);
+      const [lastDecision, setLastDecision] = useState(null);
+      const [animateIn, setAnimateIn] = useState(true);
+      const [formData, setFormData] = useState({ nombre: "", email: "", telefono: "", pais: "", cargo: "" });
+      const [formError, setFormError] = useState("");
+      const [sending, setSending] = useState(false);
+
+      useEffect(() => { setAnimateIn(true); }, [screen, currentProject, showFeedback]);
+
+      const handleDecision = (decision) => {
+        setLastDecision(decision);
+        setShowFeedback(true);
+        setAnimateIn(false);
+        setTimeout(() => setAnimateIn(true), 50);
+      };
+
+      const handleNext = () => {
+        setDecisions([...decisions, lastDecision]);
+        setShowFeedback(false);
+        setAnimateIn(false);
+        setTimeout(() => {
+          if (currentProject < PROJECTS.length - 1) setCurrentProject(currentProject + 1);
+          else setScreen("capture");
+          setAnimateIn(true);
+        }, 100);
+      };
+
+      const handleFormChange = (field, value) => {
+        setFormData({ ...formData, [field]: value });
+        setFormError("");
+      };
+
+      const handleFormSubmit = async () => {
+        if (!formData.nombre.trim() || !formData.email.trim()) {
+          setFormError("Nombre y correo son obligatorios.");
+          return;
+        }
+        if (!/\S+@\S+\.\S+/.test(formData.email)) {
+          setFormError("Ingresa un correo válido.");
+          return;
+        }
+        setSending(true);
+        var allDecisions = [...decisions];
+        var dLabels = { salvar: "Salvar", estabilizar: "Estabilizar", desconectar: "Desconectar" };
+        var payload = {
+          timestamp: new Date().toISOString(),
+          nombre: formData.nombre, email: formData.email, telefono: formData.telefono,
+          pais: formData.pais, cargo: formData.cargo,
+          decisiones: PROJECTS.map((p, i) => p.name + ": " + dLabels[allDecisions[i]]).join(" | "),
+          salvados: allDecisions.filter(d => d === "salvar").length,
+          estabilizados: allDecisions.filter(d => d === "estabilizar").length,
+          desconectados: allDecisions.filter(d => d === "desconectar").length
+        };
+        try {
+          await fetch(GOOGLE_SHEETS_URL, {
+            method: "POST", mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (e) { /* no-cors */ }
+        setSending(false);
+        setScreen("results");
+      };
+
+      const restart = () => {
+        setScreen("intro"); setCurrentProject(0); setDecisions([]);
+        setShowFeedback(false); setLastDecision(null);
+        setFormData({ nombre: "", email: "", telefono: "", pais: "", cargo: "" });
+        setFormError("");
+      };
+
+      var containerStyle = {
+        minHeight: "100vh", background: C.bg, color: C.textPrimary,
+        fontFamily: "'Segoe UI', -apple-system, sans-serif",
+        display: "flex", justifyContent: "center", padding: "20px"
+      };
+      var cardStyle = {
+        width: "100%", maxWidth: 560, margin: "0 auto",
+        opacity: animateIn ? 1 : 0, transform: animateIn ? "translateY(0)" : "translateY(16px)",
+        transition: "all 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"
+      };
+      var panelStyle = {
+        background: C.bgCard, borderRadius: 14, padding: 24,
+        border: "1px solid " + C.border, marginBottom: 16
+      };
+      var btnPrimary = {
+        padding: "14px 44px", fontSize: 15, fontWeight: 700, background: C.gold,
+        color: C.bg, border: "none", borderRadius: 10, cursor: "pointer",
+        letterSpacing: "0.01em", transition: "all 0.3s ease", boxShadow: "0 4px 16px " + C.goldMuted
+      };
+
+      // INTRO
+      if (screen === "intro") {
+        return (
+          <div style={containerStyle}>
+            <div style={{ ...cardStyle, textAlign: "center", paddingTop: 24 }}>
+              <Logo size="large" />
+              <div style={{ fontSize: 44, marginTop: 20, marginBottom: 12 }}>🏥</div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: C.gold, marginBottom: 6, lineHeight: 1.2 }}>Triage de Portafolio</h1>
+              <p style={{ color: C.textSecondary, fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
+                6 proyectos van a llegar a tu mesa.<br />
+                Cada uno con sus signos vitales: impacto, ejecución y presupuesto.<br />
+                Tu trabajo: decidir qué hacer con cada uno.
+              </p>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 32 }}>
+                {[
+                  { emoji: "💚", label: "Salvar", desc: "Proteger y acelerar", color: C.green },
+                  { emoji: "🟡", label: "Estabilizar", desc: "Intervenir", color: C.gold },
+                  { emoji: "🔴", label: "Desconectar", desc: "Cancelar", color: C.red }
+                ].map((item) => (
+                  <div key={item.label} style={{ background: C.bgCard, borderRadius: 10, padding: "12px 14px", flex: 1, border: "1px solid " + C.border }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{item.emoji}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</div>
+                    <div style={{ fontSize: 10, color: C.textMuted }}>{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setScreen("explain")} style={btnPrimary}>Empezar →</button>
+            </div>
+          </div>
+        );
+      }
+
+      // EXPLAIN
+      if (screen === "explain") {
+        var variables = [
+          { name: "Impacto Estratégico", icon: "🎯", question: "¿Qué tan conectado está este proyecto con los objetivos estratégicos del negocio?",
+            scale: [{ score: "5", text: "Directamente vinculado a un objetivo prioritario" }, { score: "3", text: "Relación moderada con la estrategia" }, { score: "1", text: "Sin conexión clara — nadie puede explicar por qué existe" }], color: C.blue },
+          { name: "Salud de Ejecución", icon: "⚡", question: "¿Qué tan bien va el proyecto en términos de tiempos y entregas?",
+            scale: [{ score: "5", text: "En tiempo, entregando valor, equipo comprometido" }, { score: "3", text: "Retrasos moderados, necesita atención" }, { score: "1", text: "En crisis, paralizado o sin tracción" }], color: C.gold },
+          { name: "Presupuesto", icon: "💰", question: "¿Cómo va el proyecto respecto a su presupuesto aprobado?",
+            scale: [{ score: "5", text: "Dentro de presupuesto o por debajo" }, { score: "3", text: "Sobrecosto controlado (hasta 30%)" }, { score: "1", text: "Sobrecosto severo (más del 80%)" }], color: C.green }
+        ];
+        return (
+          <div style={containerStyle}>
+            <div style={{ ...cardStyle, paddingTop: 24 }}>
+              <p style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, textAlign: "center" }}>Antes de empezar</p>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: C.gold, textAlign: "center", marginBottom: 6 }}>Los 3 signos vitales</h2>
+              <p style={{ fontSize: 13, color: C.textSecondary, textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>Cada proyecto que llegue a tu mesa va a mostrar estas 3 métricas.<br />Úsalas para tomar tu decisión.</p>
+              {variables.map((v, i) => (
+                <div key={i} style={{ ...panelStyle, borderLeft: "3px solid " + v.color, padding: "18px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 20 }}>{v.icon}</span>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, margin: 0 }}>{v.name}</h3>
+                  </div>
+                  <p style={{ fontSize: 13, color: C.textSecondary, margin: "0 0 12px 0", lineHeight: 1.5 }}>{v.question}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {v.scale.map((s, j) => (
+                      <div key={j} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, minWidth: 18, textAlign: "center", color: s.score === "5" ? C.green : s.score === "3" ? C.gold : C.red }}>{s.score}</span>
+                        <span style={{ fontSize: 12, color: C.textSecondary }}>{s.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <button onClick={() => setScreen("game")} style={btnPrimary}>Entendido, empecemos →</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // GAME
+      if (screen === "game") {
+        var project = PROJECTS[currentProject];
+        return (
+          <div style={containerStyle}>
+            <div style={cardStyle}>
+              <div style={{ display: "flex", gap: 5, marginBottom: 20 }}>
+                {PROJECTS.map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < currentProject ? C.gold : i === currentProject ? C.goldLight : C.bgAccent, transition: "background 0.3s ease" }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <span style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Proyecto {currentProject + 1} de {PROJECTS.length}</span>
+                <span style={{ fontSize: 18 }}>🏥</span>
+              </div>
+              {!showFeedback ? (
+                <React.Fragment>
+                  <div style={panelStyle}>
+                    <h2 style={{ fontSize: 18, fontWeight: 800, color: C.textPrimary, margin: "0 0 4px 0" }}>{project.name}</h2>
+                    <p style={{ fontSize: 11, color: C.textMuted, margin: "0 0 14px 0", textTransform: "uppercase", letterSpacing: "0.04em" }}>Sponsor: {project.sponsor}</p>
+                    <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 16px 0" }}>{project.context}</p>
+                    <div style={{ background: C.redMuted, borderLeft: "3px solid " + C.red, borderRadius: "0 8px 8px 0", padding: "10px 14px", marginBottom: 18 }}>
+                      <p style={{ fontSize: 12, color: C.red, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>{project.pressure}</p>
+                    </div>
+                    <MetricBar label="Impacto Estratégico" value={project.metrics.impacto.value} max={5} />
+                    <MetricBar label="Salud de Ejecución" value={project.metrics.ejecucion.value} max={5} />
+                    <MetricBar label="Presupuesto" value={project.metrics.presupuesto.value} max={5} />
+                    <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                      {[
+                        { label: "Impacto: " + project.metrics.impacto.label, value: project.metrics.impacto.value },
+                        { label: "Ejecución: " + project.metrics.ejecucion.label, value: project.metrics.ejecucion.value },
+                        { label: "Presupuesto: " + project.metrics.presupuesto.label, value: project.metrics.presupuesto.value }
+                      ].map((tag, i) => {
+                        var tagColor = tag.value >= 4 ? C.green : tag.value >= 3 ? C.gold : C.red;
+                        return (<span key={i} style={{ fontSize: 10, padding: "3px 10px", borderRadius: 20, background: tagColor + "18", color: tagColor, border: "1px solid " + tagColor + "30" }}>{tag.label}</span>);
+                      })}
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginBottom: 10 }}>¿Qué haces con este proyecto?</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <DecisionButton label="Salvar" emoji="💚" description="Proteger y acelerar" onClick={() => handleDecision("salvar")} />
+                    <DecisionButton label="Estabilizar" emoji="🟡" description="Intervenir y monitorear" onClick={() => handleDecision("estabilizar")} />
+                    <DecisionButton label="Desconectar" emoji="🔴" description="Cancelar y liberar" onClick={() => handleDecision("desconectar")} />
+                  </div>
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <div style={{ ...panelStyle, borderLeft: "3px solid " + C.gold }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 22 }}>💡</span>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: C.gold, margin: 0 }}>{project.name}</p>
+                        <p style={{ fontSize: 11, color: C.textMuted, margin: 0 }}>Tu decisión: {lastDecision.charAt(0).toUpperCase() + lastDecision.slice(1)}</p>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.7, margin: 0 }}>{project.feedback[lastDecision]}</p>
+                  </div>
+                  <button onClick={handleNext} style={{ ...btnPrimary, width: "100%", padding: "14px" }}>
+                    {currentProject < PROJECTS.length - 1 ? "Siguiente proyecto →" : "Ver mis resultados →"}
+                  </button>
+                </React.Fragment>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // CAPTURE
+      if (screen === "capture") {
+        return (
+          <div style={containerStyle}>
+            <div style={{ ...cardStyle, paddingTop: 24 }}>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <span style={{ fontSize: 36 }}>📊</span>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: C.gold, margin: "10px 0 6px 0" }}>Tus resultados están listos</h2>
+                <p style={{ fontSize: 13, color: C.textSecondary, margin: 0, lineHeight: 1.5 }}>Déjanos tus datos para ver el diagnóstico completo<br />de tu portafolio y las recomendaciones.</p>
+              </div>
+              <div style={panelStyle}>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Nombre completo *</label>
+                  <input type="text" value={formData.nombre} onChange={(e) => handleFormChange("nombre", e.target.value)} placeholder="Tu nombre" style={inputBaseStyle}
+                    onFocus={(e) => { e.target.style.borderColor = C.gold; }} onBlur={(e) => { e.target.style.borderColor = C.border; }} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Correo electrónico *</label>
+                  <input type="email" value={formData.email} onChange={(e) => handleFormChange("email", e.target.value)} placeholder="tu@correo.com" style={inputBaseStyle}
+                    onFocus={(e) => { e.target.style.borderColor = C.gold; }} onBlur={(e) => { e.target.style.borderColor = C.border; }} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Teléfono / WhatsApp</label>
+                  <input type="tel" value={formData.telefono} onChange={(e) => handleFormChange("telefono", e.target.value)} placeholder="+57 300 123 4567" style={inputBaseStyle}
+                    onFocus={(e) => { e.target.style.borderColor = C.gold; }} onBlur={(e) => { e.target.style.borderColor = C.border; }} />
+                </div>
+                <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>País</label>
+                    <input type="text" value={formData.pais} onChange={(e) => handleFormChange("pais", e.target.value)} placeholder="Colombia" style={inputBaseStyle}
+                      onFocus={(e) => { e.target.style.borderColor = C.gold; }} onBlur={(e) => { e.target.style.borderColor = C.border; }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Cargo / Rol</label>
+                    <input type="text" value={formData.cargo} onChange={(e) => handleFormChange("cargo", e.target.value)} placeholder="PMO, Gerente..." style={inputBaseStyle}
+                      onFocus={(e) => { e.target.style.borderColor = C.gold; }} onBlur={(e) => { e.target.style.borderColor = C.border; }} />
+                  </div>
+                </div>
+                {formError && <p style={{ fontSize: 12, color: C.red, margin: "0 0 10px 0" }}>{formError}</p>}
+                <button onClick={handleFormSubmit} disabled={sending}
+                  style={{ ...btnPrimary, width: "100%", padding: "14px", opacity: sending ? 0.6 : 1, cursor: sending ? "wait" : "pointer" }}>
+                  {sending ? "Enviando..." : "Ver mis resultados →"}
+                </button>
+              </div>
+              <p style={{ fontSize: 10, color: C.textMuted, textAlign: "center", lineHeight: 1.4 }}>Tus datos se usan solo para enviarte información relevante.<br />No compartimos tu información con terceros.</p>
+            </div>
+          </div>
+        );
+      }
+
+      // RESULTS
+      if (screen === "results") {
+        var counts = { salvar: 0, estabilizar: 0, desconectar: 0 };
+        decisions.forEach(d => { counts[d]++; });
+        var decisionEmojis = { salvar: "💚", estabilizar: "🟡", desconectar: "🔴" };
+        var decisionColors = { salvar: C.green, estabilizar: C.gold, desconectar: C.red };
+        var decisionLabels = { salvar: "Salvar", estabilizar: "Estabilizar", desconectar: "Desconectar" };
+
+        var projectBudgets = [320, 185, 90, 210, 480, 150];
+        var projectOverruns = [0.60, 1.10, 0, 0.45, 0.30, 0.20];
+        var activeProjects = counts.salvar + counts.estabilizar;
+        var cancelledProjects = counts.desconectar;
+        var totalBudgetActive = 0, totalOverrunActive = 0, resourcesFreed = 0;
+        decisions.forEach((d, i) => {
+          if (d === "desconectar") { resourcesFreed += projectBudgets[i]; }
+          else { totalBudgetActive += projectBudgets[i]; totalOverrunActive += Math.round(projectBudgets[i] * projectOverruns[i]); }
+        });
+        var avgImpactActive = decisions.reduce((sum, d, i) => d !== "desconectar" ? sum + PROJECTS[i].metrics.impacto.value : sum, 0) / (activeProjects || 1);
+        var avgHealthActive = decisions.reduce((sum, d, i) => d !== "desconectar" ? sum + PROJECTS[i].metrics.ejecucion.value : sum, 0) / (activeProjects || 1);
+        var portfolioHealthColor = avgImpactActive >= 3.5 && avgHealthActive >= 3 ? C.green : avgImpactActive >= 2.5 || avgHealthActive >= 2.5 ? C.gold : C.red;
+        var portfolioVerdict = activeProjects <= 3 ? "Portafolio enfocado — pocos proyectos, más concentración de recursos." : activeProjects <= 5 ? "Portafolio moderado — todavía manejable, pero vigila la dispersión de recursos." : "Portafolio cargado — con 6 proyectos activos, los recursos se van a dispersar.";
+
+        return (
+          <div style={containerStyle}>
+            <div style={{ ...cardStyle, paddingTop: 16 }}>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <Logo size="large" />
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: C.gold, margin: "16px 0 4px 0" }}>Tus decisiones de portafolio</h2>
+                <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>Así gestionaste los 6 proyectos que llegaron a tu mesa</p>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                {["salvar", "estabilizar", "desconectar"].map(key => (
+                  <div key={key} style={{ flex: 1, background: C.bgCard, borderRadius: 10, padding: "14px 10px", border: "1px solid " + C.border, textAlign: "center" }}>
+                    <p style={{ fontSize: 28, fontWeight: 800, color: decisionColors[key], margin: 0 }}>{counts[key]}</p>
+                    <p style={{ fontSize: 11, color: C.textMuted, margin: "2px 0 0 0" }}>{decisionEmojis[key]} {decisionLabels[key]}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={panelStyle}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Estado de tu portafolio resultante</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                  <div style={{ background: C.bgAccent, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 2px 0", textTransform: "uppercase", letterSpacing: "0.04em" }}>Proyectos activos</p>
+                    <p style={{ fontSize: 24, fontWeight: 800, color: C.textPrimary, margin: 0 }}>{activeProjects} <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 400 }}>de 6</span></p>
+                  </div>
+                  <div style={{ background: C.bgAccent, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 2px 0", textTransform: "uppercase", letterSpacing: "0.04em" }}>Proyectos cancelados</p>
+                    <p style={{ fontSize: 24, fontWeight: 800, color: cancelledProjects > 0 ? C.red : C.textMuted, margin: 0 }}>{cancelledProjects}</p>
+                  </div>
+                  <div style={{ background: C.bgAccent, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 2px 0", textTransform: "uppercase", letterSpacing: "0.04em" }}>Presupuesto comprometido</p>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: C.gold, margin: 0 }}>${totalBudgetActive}K <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 400 }}>USD</span></p>
+                  </div>
+                  <div style={{ background: C.bgAccent, borderRadius: 10, padding: "12px 14px" }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 2px 0", textTransform: "uppercase", letterSpacing: "0.04em" }}>Recursos liberados</p>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: resourcesFreed > 0 ? C.green : C.textMuted, margin: 0 }}>{resourcesFreed > 0 ? "$" + resourcesFreed + "K" : "$0"} <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 400 }}>USD</span></p>
+                  </div>
+                </div>
+                {totalOverrunActive > 0 && (
+                  <div style={{ background: C.redMuted, borderLeft: "3px solid " + C.red, borderRadius: "0 8px 8px 0", padding: "10px 14px", marginBottom: 14 }}>
+                    <p style={{ fontSize: 12, color: C.red, margin: 0 }}><strong>Sobrecosto acumulado en proyectos activos:</strong> ~${totalOverrunActive}K USD</p>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 4px 0", textTransform: "uppercase" }}>Impacto promedio</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ height: 6, flex: 1, background: C.bgAccent, borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: ((avgImpactActive / 5) * 100) + "%", background: portfolioHealthColor, borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: portfolioHealthColor }}>{avgImpactActive.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: "0 0 4px 0", textTransform: "uppercase" }}>Salud promedio</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ height: 6, flex: 1, background: C.bgAccent, borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: ((avgHealthActive / 5) * 100) + "%", background: portfolioHealthColor, borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: portfolioHealthColor }}>{avgHealthActive.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ background: portfolioHealthColor + "12", borderLeft: "3px solid " + portfolioHealthColor, borderRadius: "0 8px 8px 0", padding: "10px 14px" }}>
+                  <p style={{ fontSize: 12, color: portfolioHealthColor, margin: 0, fontWeight: 600 }}>{portfolioVerdict}</p>
+                </div>
+              </div>
+              <div style={panelStyle}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, margin: "0 0 14px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Resumen de cada decisión</p>
+                {PROJECTS.map((p, i) => {
+                  var d = decisions[i];
+                  var dColor = decisionColors[d];
+                  return (
+                    <div key={p.id} style={{ padding: "14px 0", borderBottom: i < PROJECTS.length - 1 ? "1px solid " + C.border : "none" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 14, color: C.textPrimary, fontWeight: 700 }}>{p.name}</span>
+                        <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: dColor + "18", color: dColor, border: "1px solid " + dColor + "30", fontWeight: 600 }}>
+                          {decisionEmojis[d]} {decisionLabels[d]}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: C.textSecondary, lineHeight: 1.6, margin: 0 }}>{p.feedback[d]}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ ...panelStyle, borderLeft: "3px solid " + C.gold }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, margin: "0 0 10px 0", lineHeight: 1.4 }}>Ahora piensa en tu portafolio real</p>
+                <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 10px 0" }}>En este ejercicio pudiste decidir libremente. Pero en la vida real, decir que NO a un proyecto es una de las decisiones más difíciles — y más necesarias — que existe.</p>
+                <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.7, margin: "0 0 10px 0" }}>La presión del sponsor, la falacia del costo hundido, el miedo a cancelar algo visible... todo conspira para que los portafolios se llenen de proyectos que deberían haber muerto hace meses.</p>
+                <p style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.7, margin: 0 }}>Desarrollar la capacidad de <span style={{ color: C.gold, fontWeight: 700 }}>decir que NO con datos, criterio y método</span> es lo que separa a un portafolio que quema dinero de uno que genera valor real.</p>
+              </div>
+              <div style={{ ...panelStyle, background: "linear-gradient(135deg, " + C.bgCard + ", #1a1508)", borderColor: C.goldMuted, textAlign: "center" }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: C.gold, margin: "0 0 8px 0", lineHeight: 1.4 }}>¿Quieres desarrollar esa capacidad con herramientas y prácticas reales?</p>
+                <p style={{ fontSize: 13, color: C.textSecondary, margin: "0 0 16px 0", lineHeight: 1.5 }}>La Certificación Internacional ICP-LPM de <strong style={{ color: C.textPrimary }}>Lean Portfolio Management</strong> te enseña a gestionar portafolios con método, a priorizar con datos y a tomar las decisiones difíciles que tu organización necesita.</p>
+                <a href="https://wa.me/14059346556?text=Me_quiero_certificar_en_LPM" target="_blank" rel="noopener noreferrer"
+                  style={{ display: "inline-block", padding: "14px 36px", fontSize: 14, fontWeight: 700, background: C.gold, color: C.bg, borderRadius: 10, textDecoration: "none", boxShadow: "0 4px 16px " + C.goldMuted, transition: "all 0.3s ease" }}>
+                  Quiero certificarme →
+                </a>
+              </div>
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <button onClick={restart} style={{ padding: "10px 24px", fontSize: 12, fontWeight: 600, background: "transparent", color: C.textMuted, border: "1px solid " + C.border, borderRadius: 8, cursor: "pointer", marginBottom: 16 }}>Jugar de nuevo</button>
+                <div style={{ marginTop: 8 }}>
+                  <Logo size="small" />
+                  <p style={{ fontSize: 9, color: C.textMuted, marginTop: 4, letterSpacing: "0.04em" }}>Certificación ICP-LPM · Lean Portfolio Management con IA</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    ReactDOM.render(<TriagePortafolio />, document.getElementById("root"));
+  </script>
+</body>
+</html>
